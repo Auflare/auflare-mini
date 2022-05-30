@@ -2,7 +2,6 @@
 #include <Adafruit_TFTLCD.h>
 #include <TouchScreen.h>
 #include <SD.h>
-// #include <Fonts/Auflare.h>
 
 #define LCD_CS A3
 #define LCD_CD A2
@@ -20,7 +19,6 @@
 #define YM 8
 #define XP 9
 
-#define banner 0x5C5F
 #define background 0x18C3
 #define component 0x31A6
 #define shade1 0x2945
@@ -31,7 +29,7 @@
 Adafruit_TFTLCD tft(LCD_CS, LCD_CD, LCD_WR, LCD_RD, A4);
 TouchScreen ts = TouchScreen(XP, YP, XM, YM, 300);
 
-#define BUFFPIXEL 80
+#define BUFFPIXEL 2
 float version = 3.2;
 String current = "home";
 String input = "";
@@ -45,15 +43,11 @@ int updateScreen() {
     pinMode(XM, OUTPUT);
     pinMode(YP, OUTPUT);
 }
-int randColor() {
-    return tft.color565(random(30, 230), random(30, 230), random(30, 230));
-}
 
 int unlock() {
   updateScreen();
-  image("welcome.bmp", 0, 0);
+  image("welcome", 0, 0);
   tft.setTextSize(2);
-
   current = "start";
 }
 
@@ -71,7 +65,7 @@ void setup() {
   }
   tft.fillScreen(0x0000);
 
-  image("brand.bmp", 26, 140);
+  image("brand", 26, 140);
   delay(300);
   unlock();
 }
@@ -96,39 +90,31 @@ void loop() {
         // Row 1
         if (p.x > 60 && p.x < 110 && p.y > 140 && p.y < 240 && current == "home") {
             page(background);
-            image("settings.bmp", 0, 0);
+            image("settings", 0, 0);
+            for (int i = 0; i < 5; i++) {
+                tft.fillRoundRect(20, 100 + (i * 32), tft.width() - 40, 25, 5, component);
+                tft.setCursor(35, 105 + (i * 32));
+                if (i == 0) {tft.print("Version: "); tft.print(version);}
+                if (i == 1) {tft.print("OS: "); tft.print("Auflare");}
+                if (i == 2) {tft.print("EEPROM: "); tft.print(freeMemory());}
+                if (i == 3) {tft.print("Memory: "); tft.print(32256 - freeMemory());}
+                if (i == 4) {tft.print("Runtime: "); tft.print(millis());}
+            }
         }
         if (p.x > 60 && p.x < 110 && p.y > 20 && p.y < 120 && current == "home") {
             page(background);
-            app("Notes", "Create a note");
+            image("daymap", 0, 0);
         }
         // Row 2
         if (p.x > 125 && p.x < 180 && p.y > 140 && p.y < 240 && current == "home") {
             page(background);
+            image("calc", 0, 70);
             current = "calculator";
+            input = "";
         }
         if (p.x > 125 && p.x < 180 && p.y > 20 && p.y < 120 && current == "home") {
             page(background);
             current = "timer";
-        }
-        // Row 3
-        if (p.x > 190 && p.x < 245 && p.y > 140 && p.y < 240 && current == "home") {
-            page(background);
-            app("App", "Please install an app.");
-        }
-        if (p.x > 190 && p.x < 245 && p.y > 20 && p.y < 120 && current == "home") {
-            page(background);
-            app("App", "Please install an app.");
-        }
-        // Row 4
-        if (p.x > 255 && p.x < 310 && p.y > 140 && p.y < 240 && current == "home") {
-            page(background);
-            app("App", "Please install an app.");
-        }
-
-        if (p.x > 255 && p.x < 310 && p.y > 20 && p.y < 120 && current == "home") {
-            page(background);
-            app("App", "Please install an app.");
         }
 
         if (p.x > 100 && p.x < 150 && p.y > 210 && p.y < 250 && current == "calculator") input += "1";
@@ -146,10 +132,12 @@ void loop() {
         if (current == "calculator") {
             updateScreen();
             tft.fillRoundRect(8, 15, tft.width() - 15, 50, 5, shade1);
-            tft.setCursor(15, 54);
+            tft.setCursor(15, 30);
+            tft.setTextSize(3);
             if (input.length() > 7) tft.print(input.substring(input.length() - 7, input.length()));
             else tft.print(input);
             if (input == "") tft.print("0");
+            tft.setTextSize(2);
         }
     }
 
@@ -161,15 +149,22 @@ void loop() {
         int milliseconds = ((millis() % 1000) + 5) / 10;
 
         tft.fillRoundRect(10, 15, tft.width() - 20, 50, 5, component);
-        tft.setCursor(20, 52);
+        tft.setTextSize(3);
+        tft.setCursor(20, 30);
         tft.print(hours); tft.print(":"); tft.print(minutes); tft.print(":"); tft.print(seconds); tft.print("."); tft.print(milliseconds);
+        tft.setTextSize(2);
     }
 }
 
 int app(String name, String desc) {
     tft.fillRoundRect(20, 70, tft.width() - 40, 2, 5, shade2);
-    print(name, 25, 57, "title");
-    print(desc, 20, 95, "normal");
+    tft.setCursor(25, 30);
+    tft.setTextSize(2);
+    tft.print(name);
+
+    tft.setCursor(25, 50);
+    tft.setTextSize(1);
+    tft.print(desc);
 }
 
 int home() {
@@ -185,26 +180,8 @@ int page(uint16_t color) {
     tft.fillRoundRect(60, tft.height() - 25, 120, 6, 100, text);
 }
 
-int print(String name, int x, int y, String size) {
-    tft.setCursor(x, y);
-    tft.setFont();
-    tft.print(name);
-}
-
 int apps() {
-    String names[8] = {"Settings", "Notes", "Calculator", "Timer", "App", "App", "App", "App"};
-    int p = 0;
-    tft.fillRect(0, 34, tft.width(), 1, shade3);
-    print("Recent Apps", 15, 21, "normal");
-
-    for (int i = 0; i < 4; i++) {
-        for (int j = 0; j < 2; j++) {
-            tft.drawRoundRect(15 + j * 110, 50 + i * 60, 100, 50, 5, shade2);
-            tft.fillCircle(40 + j * 110, 75 + i * 60, 18, randColor());
-            print(names[p], 25 + j * 110, 80 + i * 60, "normal");
-            p++;
-        }
-    }
+  image("apps", 0, 20);
 }
 
 void image(char *filename, int x, int y) {
@@ -216,26 +193,31 @@ void image(char *filename, int x, int y) {
   uint8_t  sdbuffer[3*BUFFPIXEL];
   uint16_t lcdbuffer[BUFFPIXEL]; 
   uint8_t  buffidx = sizeof(sdbuffer);
-  boolean  goodBmp = false;      
   boolean  flip    = true;       
   int      w, h, row, col;
   uint8_t  r, g, b;
-  uint32_t pos = 0, startTime = millis();
+  uint32_t pos = 0;
   uint8_t  lcdidx = 0;
   boolean  first = true;
 
+  if (strstr(filename, ".bmp") == NULL) {
+    char *temp = (char *)malloc(strlen(filename) + 5);
+    strcpy(temp, filename);
+    strcat(temp, ".bmp");
+    filename = temp;
+  }
+
   if ((x >= tft.width()) || (y >= tft.height())) return;
   if ((bmpFile = SD.open(filename)) == NULL) {
-    Serial.println(F("File not found"));
+    Serial.println(F("404"));
     return;
   }
 
   if (read16(bmpFile) == 0x4D42) {
-    Serial.println(F("File size: ")); Serial.println(read32(bmpFile));
+    Serial.println(read32(bmpFile));
     (void)read32(bmpFile);
     bmpImageoffset = read32(bmpFile);
-    Serial.print(F("Image Offset: ")); Serial.println(bmpImageoffset, DEC);
-    Serial.print(F("Header size: ")); Serial.println(read32(bmpFile));
+    Serial.println(read32(bmpFile));
 
     bmpWidth  = read32(bmpFile);
     bmpHeight = read32(bmpFile);
@@ -243,8 +225,6 @@ void image(char *filename, int x, int y) {
       bmpDepth = read16(bmpFile);
       
       if ((bmpDepth == 24) && (read32(bmpFile) == 0)) {
-
-        goodBmp = true;
         rowSize = (bmpWidth * 3 + 3) & ~3;      
         if (bmpHeight < 0) {
           bmpHeight = -bmpHeight;
@@ -289,9 +269,7 @@ void image(char *filename, int x, int y) {
     }
   }
   bmpFile.close();
-  if (!goodBmp) Serial.println(F("BMP format not recognized."));
 }
-
 uint16_t read16(File f) {
   uint16_t result;
   ((uint8_t *)&result)[0] = f.read();
