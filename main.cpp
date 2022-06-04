@@ -24,15 +24,13 @@
 #define BUFFPIXEL 2
 #define background 0x18C3
 #define shade1 0x2945
-#define shade2 0x4208
-#define shade3 0x4A69
+#define shade2 0x4A69
 #define text 0xFFFF
 #define yellow 0xFEC7
 
 Adafruit_TFTLCD tft(LCD_CS, LCD_CD, LCD_WR, LCD_RD, A4);
-TouchScreen ts = TouchScreen(XP, YP, XM, YM, 300);
+TouchScreen ts = TouchScreen(XP, YP, XM, YM, 100);
 
-String version = "4.20";
 String current = "home";
 String input = "";
 
@@ -47,19 +45,19 @@ int freeMemory() {
   return (int) & v - (__brkval == 0 ? (int) & __heap_start : (int) __brkval);
 }
 
-int updateScreen() {
+void updateScreen() {
   pinMode(XM, OUTPUT);
   pinMode(YP, OUTPUT);
 }
 
-int print(String value, int x, int y, int size) {
+void print(String value, int x, int y, int size) {
   tft.setTextColor(text);
   tft.setCursor(x, y);
   tft.setTextSize(size);
   tft.print(value);
 }
 
-int unlock() {
+void unlock() {
   updateScreen();
   tft.fillScreen(background);
   image("home.bmp", 0, 0);
@@ -71,7 +69,6 @@ void setup() {
   Serial.begin(9600);
   tft.reset();
   tft.begin(0x7575);
-  tft.setRotation(0);
   SD.begin(SD_CS);
   unlock();
 }
@@ -80,7 +77,7 @@ void loop() {
   if (touched > 0) touched--;
   TSPoint p = ts.getPoint();
   if (p.z > 0 && touched == 0) {
-    touched = 80;
+    touched = 90;
     p.x = map(p.x, 948, 204, 0, 320);
     p.y = map(p.y, 910, 195, 0, 240);
 
@@ -102,19 +99,28 @@ void loop() {
       for (int i = 0; i < 6; i++) {
         tft.fillRoundRect(10, 95 + (i * 32), tft.width() - 20, 25, 5, shade1);
         tft.setCursor(25, 100 + (i * 32));
-
-        if (i == 0) tft.print("Version: " + version);
-        else if (i == 1) tft.print("OS: Auflare");
-        else if (i == 2) tft.print("Display: 240x320");
-        else if (i == 3) {
-          tft.print("EEPROM: ");
-          tft.print(freeMemory());
-        }
-        else if (i == 4) tft.print("Memory: 32256");
-        else if (i == 5) {
-          tft.print("Runtime: ");
-          tft.print(millis() / 1000);
-          tft.print("s");
+        switch (i) {
+          case 0:
+            tft.print("Version: 4.20");
+            break;
+          case 1:
+            tft.print("OS: Auflare");
+            break;
+          case 2:
+            tft.print("Display: 240x320");
+            break;
+          case 3:
+            tft.print("EEPROM: ");
+            tft.print(freeMemory());
+            break;
+          case 4:
+            tft.print("Memory: 32256");
+            break;
+          case 5:
+            tft.print("Runtime: ");
+            tft.print(millis() / 1000);
+            tft.print("s");
+            break;
         }
       }
     }
@@ -191,7 +197,7 @@ void loop() {
     int milliseconds = ((millis() % 1000) + 5) / 10;
 
     tft.fillRect(0, 0, tft.width(), 50, shade1);
-    tft.fillRect(0, 48, tft.width(), 2, shade3);
+    tft.fillRect(0, 48, tft.width(), 2, shade2);
     tft.setCursor(20, 15);
     tft.setTextSize(3);
     tft.print(hours);
@@ -218,10 +224,10 @@ int calculate(int one, char op, int two) {
   else return 0;
 }
 
-int updateCalc() {
+void updateCalc() {
   updateScreen();
   tft.fillRect(0, 0, tft.width(), 50, shade1);
-  tft.fillRect(0, 48, tft.width(), 2, shade3);
+  tft.fillRect(0, 48, tft.width(), 2, shade2);
   tft.setCursor(20, 15);
   tft.setTextSize(3);
   if (input.length() > 11) tft.print(input.substring(input.length() - 11, input.length()));
@@ -229,75 +235,77 @@ int updateCalc() {
   if (input == "") tft.print("0");
 }
 
-int page(uint16_t color) {
+void page(uint16_t color) {
   updateScreen();
   current = "";
   tft.fillScreen(color);
   tft.fillRoundRect(60, tft.height() - 25, 120, 6, 100, text);
 }
 
-int apps() {
+void apps() {
   page(background);
   image("apps.bmp", 10, 20);
-  tft.fillRoundRect(10, 70, tft.width() - 20, 3, 5, shade2);
+  tft.fillRoundRect(10, 70, tft.width() - 20, 3, 5, shade1);
   image("r1.bmp", 10, 100);
   image("r2.bmp", 10, 160);
   image("r3.bmp", 10, 220);
   current = "home";
 }
 
-int calculator() {
-  updateCalc();
+void calculator() {
   p1 = 0;
   oper = ' ';
   input = "";
   p2 = "";
+  updateCalc();
   int btn = 0;
   int gap = 55;
   for (int i = 0; i < 3; i++) {
     for (int j = 0; j < 3; j++) {btn++;
       tft.setTextSize(2);
-      tft.fillCircle(35 + (gap * j), 95 + (gap * i), 20, shade3);
+      tft.fillCircle(35 + (gap * j), 95 + (gap * i), 20, shade2);
       tft.setCursor(30 + (gap * j), 90 + (gap * i));
       tft.print(btn);
     }
   }
-  tft.fillCircle(tft.width()-39, 95, 20, yellow);
-  print("+", tft.width()-44, 88, 2);
-  tft.fillCircle(tft.width()-39, 150, 20, yellow);
-  print("-", tft.width()-44, 143, 2);
-  tft.fillCircle(tft.width()-39, 205, 20, yellow);
-  print("x", tft.width()-44, 198, 2);
-  tft.fillCircle(tft.width()-39, 260, 20, yellow);
-  print("/", tft.width()-44, 253, 2);
-  tft.fillCircle(tft.width()-97, 260, 20, shade3);
+  String o = "+-x/";
+  for (int i = 0; i < 4; i++) {
+    tft.fillCircle(tft.width()-39, 95 + i * 55, 20, yellow);
+    print(String(o[i]), tft.width()-44, 88 + i * 55, 2);
+  }
+  tft.fillCircle(tft.width()-97, 260, 20, shade2);
   print("=", tft.width()-102, 253, 2);
-  tft.fillCircle(88, 260, 20, shade3);
+  tft.fillCircle(88, 260, 20, shade2);
   print("0", 83, 253, 2);
-  tft.fillCircle(35, 260, 20, shade3);
+  tft.fillCircle(35, 260, 20, shade2);
   print("C", 30, 253, 2);
 }
 
 void openFiles(File dir) {
   int inc = 15;
-  int shelf = inc;
-  int fullShelf = tft.height() - 40;
+  int shelf = inc-5;
+  int fullShelf = tft.height() - 70;
   bool first = true;
+
+  for (int i = 0; i < 20; i++) if (i % 2 == 0) tft.fillRect(0, i * 18, tft.width(), 18, shade1);
+  tft.fillRect((tft.width()/2), 0, 2, tft.height(), shade2);
+  tft.fillRoundRect(60, tft.height() - 25, 120, 6, 100, text);
 
   while (true) { shelf += inc;
     File entry = dir.openNextFile();
     if (!entry) break;
     if (entry.name()[0] == '_') {
       entry.close();
+      shelf -= inc-5;
       continue;
     }
-    if (shelf < fullShelf && first) print(entry.name(), 10, shelf, 1);
+    if (shelf < fullShelf && first) print(entry.name(), 20, shelf, 1);
     else {
       if (shelf > fullShelf) {
         shelf = inc*2;
         first = false;
       }
-      print(entry.name(), 120, shelf, 1);
+      print(entry.name(), 140, shelf, 1);
     }
     entry.close();
   }
